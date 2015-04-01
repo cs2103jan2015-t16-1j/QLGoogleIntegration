@@ -1,35 +1,41 @@
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 
 public class Task {
 	
-	private static final int CALENDAR_MONTH_OFFSET = -1;
+	private static final String STRING_PRIORITY_HIGH = "H";
+	private static final String STRING_PRIORITY_MEDIUM = "M";
+	private static final String STRING_PRIORITY_LOW = "L";
+	
+	private static final int NUM_0_SEC = 0;
+	private static final int NUM_0_MIN = 0;
+	private static final int NUM_0_HOUR = 0;
+	private static final int NUM_59_SEC = 59;
+	private static final int NUM_59_MIN = 59;
+	private static final int NUM_23_HOUR = 23;
+	private static final int NUM_PRIORITY_HIGH = 3;
+	private static final int NUM_PRIORITY_MEDIUM = 2;
+	private static final int NUM_PRIORITY_LOW = 1;
+	
 	private String _name; 
 	private String _description;
-	private char _priority;
+	private String _priority;
+	private String _googleID;
 	private Calendar _startDate; 
 	private Calendar _dueDate; 
 	private boolean _isCompleted;
-	private int _isDue;
+	private boolean _isOverdue;
 	private boolean _shouldSync;
-	private String _googleIdentifier;
-	
-	public String toString() {
-	    return "[\"" + _name + "\", \"" +
-	                   _description + "\", \"" +
-	                   _priority + "\", \"" +
-	                   _startDate + "\", \"" +
-	                   _dueDate + "\", \"" +
-	                   _isCompleted + "\", \"" +
-	                   _isDue + "\", \"" +
-	                   _shouldSync + "\"]";
-	                   
-	}
+	private boolean _hasStartTime;
+	private boolean _hasDueTime;
 	
 	/* Constructors */
 	public Task(String name) {
 		_name = new String(name);
-		_googleIdentifier = "";
+		_isCompleted = false;
+		_hasDueTime = false;
+		_hasStartTime = false;
 	}
 	
 	/* Mutators */
@@ -38,57 +44,93 @@ public class Task {
 	}
 	
 	public void setDescription(String description) {
-		_description = new String(description);
+		_description = description;
 	}
 	
-	public void setPriority(char priority) {
-		switch (priority) {
-		case 'L': 
-			_priority = 'L';
-			break;
-		case 'M': 
-			_priority = 'M';
-			break;
-		case 'H': 
-			_priority = 'H';
-			break;
-		default: 
-			break;
-		}
-		
+	public void setPriority(String priority) {
+		_priority = priority;
+	}
+	
+	public void setGoogleID(String ID) {
+		_googleID = ID;
 	}
 	
 	public void setStartDate (String startDateString) {
-		int startDateInt = changeFromDateStringToDateInt(startDateString);
-		startDateInt = formatToDDMMYYYY(startDateInt);
+		Calendar startDate = DateHandler.
+				convertToDateCalendar(startDateString);
+		startDate.set(Calendar.HOUR_OF_DAY, NUM_0_HOUR);
+		startDate.set(Calendar.MINUTE, NUM_0_MIN);
+		startDate.set(Calendar.SECOND, NUM_0_SEC);
+		_startDate = startDate;
 		
-		int startDay = decodeDayFromDate(startDateInt);
-		int startMonth = decodeMonthFromDate(startDateInt);
-		int startYear = decodeYearFromDate(startDateInt);
+		// older implementation
+		/*
+		int startDateInt = DateHandler.changeFromDateStringToDateInt(startDateString);
 		
-		_startDate = new GregorianCalendar(startYear, startMonth + CALENDAR_MONTH_OFFSET, startDay);
+		int startDay = DateHandler.decodeDayFromDateInt(startDateInt);
+		int startMonth = DateHandler.decodeMonthFromDateInt(startDateInt);
+		int startYear = DateHandler.decodeYearFromDateInt(startDateInt);
+		
+		_startDate = new GregorianCalendar(startYear, 
+				startMonth + OFFSET_CALENDAR_MONTH, 
+				startDay, 
+				NUM_0_HOUR, 
+				NUM_0_MIN, NUM_0_SEC);
+		*/
 	}
 	
 	public void setDueDate (String dueDateString) {
-		int dueDateInt = changeFromDateStringToDateInt(dueDateString);
-		dueDateInt = formatToDDMMYYYY(dueDateInt);
+		Calendar dueDate = DateHandler.
+				convertToDateCalendar(dueDateString);
+		dueDate.set(Calendar.HOUR_OF_DAY, NUM_23_HOUR);
+		dueDate.set(Calendar.MINUTE, NUM_59_MIN);
+		dueDate.set(Calendar.SECOND, NUM_59_SEC);
+		_dueDate = dueDate;
 		
-		int dueDay = decodeDayFromDate(dueDateInt);
-		int dueMonth = decodeMonthFromDate(dueDateInt);
-		int dueYear = decodeYearFromDate(dueDateInt);
+		// older implementation
+		/*
+		int dueDateInt = DateHandler.changeFromDateStringToDateInt(dueDateString);
 		
-		_dueDate = new GregorianCalendar(dueYear, dueMonth + CALENDAR_MONTH_OFFSET, dueDay);
+		int dueDay = DateHandler.decodeDayFromDateInt(dueDateInt);
+		int dueMonth = DateHandler.decodeMonthFromDateInt(dueDateInt);
+		int dueYear = DateHandler.decodeYearFromDateInt(dueDateInt);
+		
+		_dueDate = new GregorianCalendar(dueYear, 
+				dueMonth + OFFSET_CALENDAR_MONTH, 
+				dueDay, 
+				NUM_23_HOUR, 
+				NUM_59_MIN, NUM_59_SEC);
+		*/
+		
+		updateIsOverdue();
 	}
-
-	private int formatToDDMMYYYY(int dateInt) {
-		if(dateInt > 3012) {
-			return dateInt;
-		} 
-		else {
-			dateInt *= 10000;
-			Calendar today = new GregorianCalendar();
-			dateInt += today.get(Calendar.YEAR);
-			return dateInt;
+	
+	public void setStartDate(Calendar startDate) {
+		_startDate = startDate;
+	}
+	
+	public void setDueDate(Calendar dueDate) {
+		_dueDate = dueDate;
+		updateIsOverdue();
+	}
+	
+	public void setHasStartTime(boolean hasTime) {
+		_hasStartTime = hasTime;
+	}
+	
+	public void setHasDueTime(boolean hasTime) {
+		_hasDueTime = hasTime;
+	}
+	
+	public void setIsCompleted(boolean isCompleted) {
+		_isCompleted = isCompleted;
+	}
+	
+	public void toggleCompleted() {
+		if(_isCompleted) {
+			setNotCompleted();
+		} else {
+			setCompleted();
 		}
 	}
 	
@@ -100,9 +142,20 @@ public class Task {
 		_isCompleted = false;
 	}
 	
-	public void updateIsDue() {
+	public void updateIsOverdue() {
 		Calendar today = new GregorianCalendar();
-		_isDue = _dueDate.compareTo(today);
+		today.set(Calendar.HOUR_OF_DAY, 23);
+		today.set(Calendar.MINUTE, 59);
+		today.set(Calendar.SECOND, 59);
+		if(_dueDate == null || 
+				_isCompleted == true || 
+				_dueDate.compareTo(today) > 0)
+				 {
+			_isOverdue = false;
+		}
+		else {
+			_isOverdue = true;
+		}
 	}
 	
 	public void setShouldSync() {
@@ -113,10 +166,10 @@ public class Task {
 		_shouldSync = false;
 	}
 	
-	public void setGoogleIdentifier(String identifier) {
-	    _googleIdentifier = identifier;
+	public void setIsShouldSync(boolean shouldSync) {
+		_shouldSync = shouldSync;
 	}
-
+	
 	/* Accessors */
 	public String getName() {
 		return _name;
@@ -126,8 +179,40 @@ public class Task {
 		return _description;
 	}
 	
-	public char getPriority() {
-		return _priority;
+	public String getPriority() {
+		if(_priority == null) {
+			return null;
+		}
+		if(_priority.equalsIgnoreCase(STRING_PRIORITY_LOW)) {
+			return STRING_PRIORITY_LOW;
+		}
+		if(_priority.equalsIgnoreCase(STRING_PRIORITY_MEDIUM)) {
+			return STRING_PRIORITY_MEDIUM;
+		}
+		if(_priority.equalsIgnoreCase(STRING_PRIORITY_HIGH)) {
+			return STRING_PRIORITY_HIGH;
+		}
+		return null;
+	}
+	
+	public String getGoogleID() {
+		return _googleID;
+	}
+	
+	public int getPriorityInt() {
+		if(_priority == null) {
+			return 0;
+		}
+		if(_priority.equalsIgnoreCase(STRING_PRIORITY_LOW)) {
+			return NUM_PRIORITY_LOW;
+		}
+		if(_priority.equalsIgnoreCase(STRING_PRIORITY_MEDIUM)) {
+			return NUM_PRIORITY_MEDIUM;
+		}
+		if(_priority.equalsIgnoreCase(STRING_PRIORITY_HIGH)) {
+			return NUM_PRIORITY_HIGH;
+		}
+		return 0;
 	}
 	
 	public Calendar getStartDate() {
@@ -138,50 +223,107 @@ public class Task {
 		return _dueDate;
 	}
 	
+	public String getStartDateString() {
+		if(_startDate == null) {
+			return "no start date";
+		}
+		SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+		return sdf.format(_startDate.getTime());
+	}
+	
+	public String getStartDateTimeString() {
+		if(_startDate == null) {
+			return "no start date";
+		}
+		SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+		return sdf.format(_startDate.getTime());
+	}
+	
+	public String getDueDateString() {
+		if(_dueDate == null) {
+			return "no due date";
+		}
+		SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+		return sdf.format(_dueDate.getTime());
+	}
+	
+	public String getDueDateTimeString() {
+		if(_dueDate == null) {
+			return "no due date";
+		}
+		SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+		return sdf.format(_dueDate.getTime());
+	}
+	
+	public boolean getHasStartTime() {
+		return _hasStartTime;
+	}
+	
+	public boolean getHasDueTime() {
+		return _hasDueTime;
+	}
+	
 	public boolean getIsCompleted() {
 		return _isCompleted;
 	}
 	
-	public int getIsDue() {
-		return _isDue;
+	public boolean getIsOverdue() {
+		updateIsOverdue();
+		return _isOverdue;
 	}
 	
 	public boolean getShouldSync() {
 		return _shouldSync;
 	}
 	
-	public String getGoogleIdentifier() {
-        return _googleIdentifier;
-    }
-	
-	/* Static methods */
-	public static int decodeYearFromDate(int date) {
-		return date%10000;
-	}
-	
-	public static int decodeMonthFromDate(int date) {
-		int month = (date%1000000)/10000;
-		if(month/10 == 0) {
-			month = month%10;
+	public int getDuration() {
+		if(_dueDate == null || _startDate == null || _dueDate.compareTo(_startDate) < 0) {
+			return -1;
 		}
-		return month;
-	}
-
-	public static int decodeDayFromDate(int date) {
-		int day = date/1000000;
-		if(day/10 == 0) {
-			day = day%10;
+		Calendar _dueDateDummy = new GregorianCalendar(_dueDate.get(Calendar.YEAR), 
+				_dueDate.get(Calendar.MONTH),
+				_dueDate.get(Calendar.DAY_OF_MONTH));
+		Calendar _startDateDummy  = new GregorianCalendar(_startDate.get(Calendar.YEAR), 
+				_startDate.get(Calendar.MONTH),
+				_startDate.get(Calendar.DAY_OF_MONTH));
+		int duration = 0;
+		while(!_dueDateDummy.equals(_startDateDummy)) {
+			_startDateDummy.add(Calendar.DAY_OF_MONTH, 1);
+			duration++;
 		}
-		return day;
+		return duration; 
 	}
 	
-	public static int changeFromDateStringToDateInt(String dueDateString) {
-		if(dueDateString.charAt(0) == '0') {
-			dueDateString = dueDateString.replaceFirst("0", "");
+	/* Other methods */
+	
+	public Task clone() {
+		Task clonedTask = new Task(_name);
+		if(_startDate == null) {
+			clonedTask.setStartDate((Calendar)null);
+		} else {
+			Calendar startdate = new GregorianCalendar(_startDate.get(Calendar.YEAR),
+					_startDate.get(Calendar.MONTH), 
+					_startDate.get(Calendar.DAY_OF_MONTH),
+					_startDate.get(Calendar.HOUR_OF_DAY),
+					_startDate.get(Calendar.MINUTE),
+					_startDate.get(Calendar.SECOND));
+			clonedTask.setStartDate(startdate);
 		}
-		
-		int dueDateInt = Integer.valueOf(dueDateString);
-		return dueDateInt;
+		if(_dueDate == null) {
+			clonedTask.setStartDate((Calendar)null);
+		} else {
+			Calendar dueDate = new GregorianCalendar(_dueDate.get(Calendar.YEAR),
+					_dueDate.get(Calendar.MONTH), 
+					_dueDate.get(Calendar.DAY_OF_MONTH),
+					_dueDate.get(Calendar.HOUR_OF_DAY),
+					_dueDate.get(Calendar.MINUTE),
+					_dueDate.get(Calendar.SECOND));
+			clonedTask.setDueDate(dueDate);
+		}
+		clonedTask.setDescription(_description);
+		clonedTask.setIsCompleted(_isCompleted);
+		clonedTask.setPriority(_priority);
+		clonedTask.setIsShouldSync(_shouldSync);
+		return clonedTask;
 	}
-
 }

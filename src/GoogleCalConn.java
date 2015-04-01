@@ -38,12 +38,12 @@ public class GoogleCalConn {
         return getService().calendarList().list().execute();
     }
     
-    public Calendar getCalendarByID(String calendarId) 
+    public Calendar getCalendar(String calendarId) 
             throws Exception {
         return getService().calendars().get(calendarId).execute();
     }
     
-    public Event getEventByID(String calendarId, String eventId)
+    public Event getEvent(String calendarId, String eventId)
             throws Exception {
         return getService().events().get(calendarId, eventId).execute();
     }
