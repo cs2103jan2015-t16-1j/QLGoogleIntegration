@@ -1,5 +1,7 @@
 import java.io.File;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
@@ -11,7 +13,9 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.client.util.store.DataStoreFactory;
 import com.google.api.client.util.store.FileDataStoreFactory;
+import com.google.api.client.util.store.MemoryDataStoreFactory;
 import com.google.api.services.calendar.CalendarScopes;
+import com.google.api.services.tasks.TasksScopes;
 
 
 public class GoogleLogin {
@@ -26,13 +30,17 @@ public class GoogleLogin {
         
         HttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
         
-        File f = new File("googlecred");
+        //File f = new File("googlecred");
         
-        DataStoreFactory dataStoreFactory = new FileDataStoreFactory(f);
+        Collection<String> scopes = new HashSet<String>();
+        scopes.add(CalendarScopes.CALENDAR);
+        scopes.add(TasksScopes.TASKS);
+        
+        DataStoreFactory dataStoreFactory = new MemoryDataStoreFactory(); //new FileDataStoreFactory(f);
 
         GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
                 httpTransport, JSON_FACTORY, CLIENT_ID, CLIENT_SECRET,
-                Collections.singleton(CalendarScopes.CALENDAR)).setDataStoreFactory(dataStoreFactory)
+                scopes).setDataStoreFactory(dataStoreFactory)
                 .build();
 
         return new AuthorizationCodeInstalledApp(flow, new LocalServerReceiver()).authorize(user);
